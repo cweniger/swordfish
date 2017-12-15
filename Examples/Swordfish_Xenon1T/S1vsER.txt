@@ -1,0 +1,15 @@
+# Nuclear recoil energy as a function of S1 for the median
+# of the nuclear recoil band in Xenon1T.
+# Extracted from bottom panel of Fig. 2 of 1705.06655
+# Corresponds to S1 values where the grey nuclear recoil
+# contours cross the solid red nuclear recoil median line
+# (extrapolated down to S1 = 0, E_R = 0).
+# Columns: S1 (Photoelectrons), Nuclear recoil energy (keV)
+0.0 0.0
+4.2 5.0
+12.1 10.0
+20.6 15.0
+29.7 20.0
+39.3 25.0
+49.4 30.0
+70.0 40.0
