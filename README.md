@@ -70,7 +70,7 @@ Let us know if you run into problems.
 
 or
     
-    pip install git+ssh://git@github.com/cweniger/swordfish.git
+    pip install git+https://github.com/cweniger/swordfish
 
 Citation
 --------
