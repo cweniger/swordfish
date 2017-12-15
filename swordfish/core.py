@@ -502,9 +502,6 @@ class Swordfish(object):
             d2 = -2*(self.lnL(S0, S) - self.lnL(S0, S0))
             return d2
         else:
-            #eS, N = self.equivalentshapes(S)
-            #eS0, N0 = self.equivalentshapes(S0)
-            #d2 = ((eS-eS0)**2/(N0+N)*2).sum()
             x = self.euclideanizedsignal(S)
             x0 = self.euclideanizedsignal(S0)
             return ((x-x0)**2).sum()
@@ -521,7 +518,6 @@ def _func_to_templates(flux, x, dx = None):
     if dx is None:
         dx = x*0.01+0.001
     fluxes = []
-    #fluxes.append(flux(*x))
     for i in range(len(x)):
         xU = copy.copy(x)
         xL = copy.copy(x)
