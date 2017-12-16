@@ -60,7 +60,7 @@ class Swordfish(object):
           background components.  If `None`, it is set to zero.
         """
         if not isinstance(B, list):
-            B = [np.array(B, dtype='flota64'),]
+            B = [np.array(B, dtype='float64'),]
         else:
             B = [np.array(b, dtype='float64') for b in B]
             if len(set([b.shape for b in B])) != 1:
