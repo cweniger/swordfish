@@ -158,6 +158,8 @@ class LinModel(object):
 
     @staticmethod
     def _get_auto_scale(flux, exposure):
+        #print exposure.min(), exposure.max()
+        #print flux.min(), flux.max()
         return np.array(
                 [1./(f*exposure).max() for f in flux]
                 )

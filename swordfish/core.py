@@ -46,7 +46,7 @@ class Swordfish(object):
         
         Parameters
         ----------
-        * `B` [list of equal-shaped arrays with length `n_comp`]:
+        * `B` [list of equal-shaped arrays with length `n_comp`, or function]:
           Background model
         * `N` [list of non-negative floats with length `n_comp`, or None]:
           Normalization of background components, if `None` assumed to be one.
@@ -58,13 +58,27 @@ class Swordfish(object):
         * `K` [matrix-like]:
           Covariance matrix, meant to refer to the flattened version of the
           background components.  If `None`, it is set to zero.
+        * `theta0` [vector or None]: If `B` is a function, this vector
+          specifies the function parameters around which the background model
+          is expanded.
         """
-        if not isinstance(B, list):
-            B = [np.array(B, dtype='flota64'),]
+        if callable(B):  # If B is function
+            if N is None:
+                raise ValueError("If B is function, N cannot be None.")
+            self._Btot = B(*N)
+            B = _func_to_templates(B, N)
+            N = np.zeros_like(N)
         else:
-            B = [np.array(b, dtype='float64') for b in B]
-            if len(set([b.shape for b in B])) != 1:
-                raise ValueError("Incompatible shapes in B.")
+            if not isinstance(B, list):
+                B = [np.array(B, dtype='flota64'),]
+            else:
+                B = [np.array(b, dtype='float64') for b in B]
+                if len(set([b.shape for b in B])) != 1:
+                    raise ValueError("Incompatible shapes in B.")
+                if N is None:
+                    self._Btot = sum(B)
+                else:
+                    self._Btot = sum([B[i]*N[i] for i in range(len(B))])
 
         # Save shape, and flatten arrays
         shape = B[0].shape
@@ -89,10 +103,6 @@ class Swordfish(object):
         else:
             E = np.array(E, dtype='float64').flatten()
 
-        if N is None:
-            self._Btot = sum(B)
-        else:
-            self._Btot = sum([B[i]*N[i] for i in range(len(B))])
         self._B = B  # List of equal-sized arrays
         self._T = T  # List of standard deviations (0., finite or None)
         self._K = la.aslinearoperator(K) if K is not None else None
