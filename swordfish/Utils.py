@@ -1055,15 +1055,15 @@ class SignalHandler(object):
             dist, ind = self.treeX.query(P0, k=10)
             if dist.max() > 10:
                 print "WARNING: Less than 10 points within 1 sigma radius"
-            X = array(self.X)
+            X = np.array(self.X)
             # Construct mean vector
             meanV = []
             for a in range(n_coords):
                 m = X[:,a].mean()
                 meanV.append([m])
-            meanV = array(meanV)
+            meanV = np.array(meanV)
             # Construct Euclideanized Signal scatter matrix
-            ES_matrix = zeros((n_coords,n_coords))
+            ES_matrix = np.zeros((n_coords,n_coords))
             for j in range(X.shape[0]):
                 ES_matrix += (X[j,:].reshape(1,n_coords) - meanV).T.dot((X[j,:].reshape(1,n_coords) - meanV))
             # Compute and order eigen values
