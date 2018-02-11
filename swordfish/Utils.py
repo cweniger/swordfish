@@ -942,3 +942,148 @@ class Funkfish(object):
         x0err = np.where(x0>0., x0*0.01, 0.01)
         M = self._init_minuit(chi2, x = x0, x_err = x0err, **kwargs)
         return M
+
+
+class SignalHandler(object):
+    r""" Handles the nearest neighbour finder for a some selection of points using the Euclideanized signal 
+    """
+    def __init__(self, P, X, verbose = False):
+        r"""Initialises the class
+        Parameters
+        ----------
+        * 'P' [ndarray, shape = (number of points, number of parameters)]:
+            List of points with associated particle physics parameters
+        * 'X' [ndarray, shape = (number of points, Euclideanized Signal shape)]:
+            List of points with associated Euclideanized signal
+        """
+        self.P = P
+        self.X = X
+        self.verbose = verbose
+        
+        self._init_BallTree()
+    
+    def _init_BallTree(self):
+        r"""
+        Parameters
+        ----------
+        *
+        Returns
+        -------
+        *
+        """
+        if self.verbose: print "Initializing ball trees for nearest neighbour searches..."
+        self.treeX = BallTree(self.X, leaf_size=40)
+        self.treeP = BallTree(self.P, leaf_size=40)
+        if self.verbose: print "...done!"
+            
+    def query_region(self, P0, sigma, return_indices = False, return_distance = False):
+        r"""
+        Parameters
+        ----------
+        *
+        Returns
+        -------
+        *
+        """
+        # Obtain index of nearest parameter sample
+        i0 = self.treeP.query([P0], k = 1, return_distance = False)[0][0]
+        #print i0, self.P[i0]
+        
+        # Obtain 1-sigma region around that parameter point and train linear predictor
+        ind_interp = self.treeX.query_radius([self.X[i0]], r = 1.)[0]
+        clf = Ridge(alpha=1e-9)
+        clf.fit(self.P[ind_interp], self.X[ind_interp])
+        
+        # Estimate X0
+        X0 = clf.predict([P0])[0]
+        if ((X0 - self.X[i0])**2).sum() > 1.:
+            print "WARNING: Signal extrapolated beyond sample points."
+            
+        # Obtain region around X0
+        ind, dist = self.treeX.query_radius([X0], r = sigma, return_distance = True)
+        ind = ind[0]
+        dist = dist[0]
+        print ind.shape
+        if return_indices:
+            return self.P[ind], ind
+        elif return_distance:
+            return self.P[ind], ind, dist
+        else:
+            return self.P[ind]
+        
+    def Volume(self, sigma = 1.):
+        r"""Estimates the total 'volume' of euclideanized space 
+        Parameters
+        ----------
+        * sigma:
+            The level at which you would like to discriminate models
+        Returns
+        -------
+        * Volume
+        """
+        weights = self.treeX.query_radius(self.X, r=sigma, count_only = True)
+        d = self.estimate_dim(self.X)
+        R = 1.
+        packing_frac = array([0., 1., 1.*pi*sqrt(3.)/6., 1.*pi*sqrt(2.)/6.,
+                        pi**2./16., pi**2.*sqrt(2)/30, pi**3.*sqrt(3)/144,
+                        pi**3./105, pi**4./384.])
+        packing = []
+        for i in d:
+            packing.append(packing_frac[int(i)])
+        vol = sum(packing*R**(-d)/weights)
+        return vol
+    
+    def estimate_dim(self, points):
+        r""" Estimates the dimension of the euclideanized space
+        i.e. the number of bins that could be changed in order to cause discriminability at the 1 sigma level. Done using a PCA like algorithm
+
+        Parameters
+        ----------
+        * points [ndarray, shape = (number of points, Euclideanized Signal shape)]:
+            List of points and associated Euclideanized Signal
+        Returns
+        -------
+        * dim [array shape=(number of points)]:
+            An estimate of the dimensionality of the Euclideanized space
+        """
+        dim = []
+        n_coords = len(points[0,:])
+        for i in range(len(points[:,0])):
+            mean = []
+            P0 = points[i,:].reshape(1, -1)
+            # Find closest 10 associated points
+            dist, ind = self.treeX.query(P0, k=10)
+            if dist.max() > 10:
+                print "WARNING: Less than 10 points within 1 sigma radius"
+            X = np.array(self.X)
+            # Construct mean vector
+            meanV = []
+            for a in range(n_coords):
+                m = X[:,a].mean()
+                meanV.append([m])
+            meanV = np.array(meanV)
+            # Construct Euclideanized Signal scatter matrix
+            ES_matrix = np.zeros((n_coords,n_coords))
+            for j in range(X.shape[0]):
+                ES_matrix += (X[j,:].reshape(1,n_coords) - meanV).T.dot((X[j,:].reshape(1,n_coords) - meanV))
+            # Compute and order eigen values
+            eig = eigvals(ES_matrix)
+            dim.append(sum(abs(eig) > abs(1e-2*max(eig))))
+        return array(dim)
+    
+    def estimate_I(self, P0, sigma = 1.):
+        r"""
+        Parameters
+        ----------
+        *
+        Returns
+        -------
+        *
+        """
+        P_region, ind = self.query_region(P0, sigma = sigma, return_indices = True)
+        X_region = self.X[ind]
+        clf = Ridge(alpha=1e-9)
+        clf.fit(P_region, X_region)
+        A = clf.coef_
+        I = A.T.dot(A)
+        return I
