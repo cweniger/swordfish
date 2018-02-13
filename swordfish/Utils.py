@@ -1021,9 +1021,10 @@ class SignalHandler(object):
         -------
         * Volume
         """
+        from scipy.stats import chi2
         weights = self.treeX.query_radius(self.X, r=sigma, count_only = True)
         d = self.estimate_dim(self.X)
-        R = 1.
+        R = chi2.ppf(0.683,d) # TODO: Fix to match sigma and the percentage
         packing_frac = array([0., 1., 1.*pi*sqrt(3.)/6., 1.*pi*sqrt(2.)/6.,
                         pi**2./16., pi**2.*sqrt(2)/30, pi**3.*sqrt(3)/144,
                         pi**3./105, pi**4./384.])
