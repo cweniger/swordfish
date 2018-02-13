@@ -545,7 +545,7 @@ class EuclideanizedSignal(object):
         # TODO: Add all components and their errors to D
 
         D = D(np.eye(self._model._nbins))  # transform to dense matrix
-        invD = np.linalg.linalg.inv(D)
+        invD = np.linalg.inv(D)
         A2 = np.diag(exposure).dot(invD).dot(np.diag(exposure))
         A = sqrtm(A2)
         Kdiag = np.diag(self._model._systematics.dot(np.eye(self._model._nbins)))
