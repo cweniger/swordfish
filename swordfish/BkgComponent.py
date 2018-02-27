@@ -5,6 +5,9 @@ import numpy as np
 import swordfish as sf
 import scipy.sparse.linalg as la
 import pylab as plt
+import harpix as hp
+import scipy.sparse as sp
+import healpy
 from operator import mul
 
 class BkgComponent(object):
@@ -44,13 +47,9 @@ class BkgComponent(object):
             # TODO: Implement warning if second derivative too large
             # print ((dB_1 + dB_2)/dB).max()
         self.dB_list = dB_list
-        def matvec(x):
-            result = np.zeros_like(x)
-            for dB in self.dB_list:
-                result += dB*(dB*x).sum()
-            return result
-        self.Cov_Bfunc = la.LinearOperator((self.nbins, self.nbins), matvec
-                = matvec)
+        self.Cov_Bfunc = la.LinearOperator((self.nbins, self.nbins),
+                matvec = 
+                lambda x: sum([dB*(dB*x.T).sum() for dB in self.dB_list]))
         self.Var_Bfunc = Var_Bfunc
 
         if self._cov is None:
@@ -95,7 +94,7 @@ class BkgComponent(object):
         return TensorMulBkgComponent(self, b)
 
     def getSwordfish(self, E = None, ignore_cov = False):
-        if E is not None:
+        if E is not None and type(E) != float:
             E = E.flatten()
         B = self.__call__().flatten()
         if not ignore_cov:
@@ -212,37 +211,179 @@ class SumBkgComponent(BkgComponent):
     def cov(self):
         return self.A.cov() + self.B.cov()
 
-        
-E = np.linspace(0, 1, 20)
-l = np.linspace(0, 1, 40)
-M = lambda x: np.sin(l*20*x[1])*x[0]+2
-S = lambda x: x[0]*(E+1)
-m = BkgComponent(M, x0 = [1., .5], xerr = [0.1, 0.1])
-s = BkgComponent(S, x0 = [1.], xerr = [0.2])
-ms = m.tensordot(s)
+def test0():
+    E = np.linspace(0, 1, 20)
+    l = np.linspace(0, 1, 40)
+    M = lambda x: np.sin(l*20*x[1])*x[0]+2
+    S = lambda x: x[0]*(E+1)
+    m = BkgComponent(M, x0 = [1., .5], xerr = [0.1, 0.1])
+    s = BkgComponent(S, x0 = [1.], xerr = [0.2])
+    ms = m.tensordot(s)
 
-SF = ms.getSwordfish(ignore_cov = True)
-#UL = SF.upperlimit(ms().flatten(), 0.05)
-#F = SF.infoflux(ms().flatten())
+    SF = ms.getSwordfish(ignore_cov = True)
 
-#B = ms().flatten()
-#K = ms.cov()
-#E = np.ones_like(B)*100
+def test1():
+    E = np.linspace(0, 1, 10)
+    l = np.linspace(0, 1, 20)
+    M = lambda x: np.sin(l*20*x[1])*x[0]+2
+    S = lambda x: x[0]*(E+1)
+    m = BkgComponent(M, x0 = [1., .5], xerr = [0.1, 0.1])
+    s = BkgComponent(S, x0 = [1.], xerr = [0.2])
+    ms = m.tensordot(s)
 
-#SF = sf.Swordfish([B], K = None, E = E)
-#UL = SF.upperlimit(B, 0.05)
-#print UL
+    SF = ms.getSwordfish(ignore_cov = False)
+    UL = SF.upperlimit(ms().flatten(), 0.05, force_gaussian = True,
+            solver='direct')
+    #F = SF.infoflux(ms().flatten())
 
-#SF = sf.Swordfish([B], K = K, E = E)
-#F = SF.infoflux(B)
-#F = F.reshape(ms().shape)
-#plt.imshow(F)
-#plt.colorbar()
-#plt.show()
-#quit()
-#ct = c1.tensordot(c2)
-#print ct()
-#print c()
-#print c.cov()
-#print c.err()
-#print c.cov()
+    #B = ms().flatten()
+    #K = ms.cov()
+    #E = np.ones_like(B)*100
+
+    #SF = sf.Swordfish([B], K = None, E = E)
+    #UL = SF.upperlimit(B, 0.05)
+    #print UL
+
+    #SF = sf.Swordfish([B], K = K, E = E)
+    #F = SF.infoflux(B)
+    #F = F.reshape(ms().shape)
+    #plt.imshow(F)
+    #plt.colorbar()
+    #plt.show()
+    #quit()
+    #ct = c1.tensordot(c2)
+    #print ct()
+    #print c()
+    #print c.cov()
+    #print c.err()
+    #print c.cov()
+
+def test2():
+    # Set stage
+    grid = hp.Harpix().adddisc(vec = (1, 0, 0), radius = 20, nside = 32)
+    E = np.linspace(1, 2, 5)
+
+    # Signal shape
+    sig_shape = hp.zeroslike(grid).addfunc(
+            lambda l, b: 1./(l**2 + b**2 + 1))
+    sig_spec = np.exp(-E)
+
+    # Background shapes (and error)
+    bkg_shape = hp.zeroslike(grid).addfunc(
+            lambda l, b: np.cos(l/10)*np.cos(b/10) + 10/(b**2 + 1))
+    bkg_spec = lambda x: E**-x[0]*x[1]
+    err_shape = bkg_shape * 0.001
+    cov = hp.HarpixSigma1D(err_shape, corrlength = 1.)
+
+    # Background component model
+    bkg_comp = BkgComponent(lambda x: bkg_shape.getdata(mul_sr = True)*x[0],
+            x0 = [1.], xerr = [0.001], cov = cov).tensordot(
+                    BkgComponent(bkg_spec, x0 = [2., 1.], xerr = [0.001, 0.001]))
+    SF = bkg_comp.getSwordfish()
+
+    # Signal model
+    S = np.multiply.outer(sig_shape.getdata(mul_sr = True), sig_spec).flatten()
+
+    #UL = SF.upperlimit(S, 0.05)
+    F = SF.infoflux(S).reshape(-1, 5)
+    grid.data = F[:,3]
+    m = grid.gethealpix(nside = 16)
+    healpy.mollview(m, nest=True)
+    plt.show()
+    #print UL
+
+def test3():
+    # Set stage
+    grid = hp.Harpix().adddisc(vec = (1, 0, 0), radius = 2, nside = 1024)
+    #grid.addsingularity((0,0), 0.3, 2, n = 1000)
+    print len(grid.data)
+    #quit()
+    E = np.linspace(1, 2, 2)
+
+    # Signal shape
+    sig_shape = hp.zeroslike(grid).addfunc(
+            lambda l, b: 1./(l**2 + b**2 + 2.))
+    sig_spec = np.exp(-E)
+
+    # Background shapes (and error)
+    bkg_shape = hp.zeroslike(grid).addfunc(
+            lambda l, b: 1+0*np.cos(l/10)*np.cos(b/10) + 0/(b**2 + 1))
+    bkg_spec = lambda x: E**-x[0]*x[1]
+    err_shape = bkg_shape * 0.0001
+    cov = hp.HarpixSigma1D(err_shape, corrlength = 1.)
+
+    # Background component model
+    bkg_comp = BkgComponent(lambda x: bkg_shape.getdata(mul_sr = True)*x[0],
+            x0 = [1.], xerr = [0.001], cov = cov).tensordot(
+                    BkgComponent(bkg_spec, x0 = [2., 1.], xerr = [0.001, 0.001]))
+    SF = bkg_comp.getSwordfish()
+
+    # Signal model
+    S = np.multiply.outer(sig_shape.getdata(mul_sr = True), sig_spec).flatten()
+
+    #UL = SF.upperlimit(S, 0.05)
+    print 'infoflux...'
+    F = SF.infoflux(S, solver = 'cg').reshape(-1, 2)
+    print '...done'
+    grid.data = F[:,1]
+    grid._div_sr()
+    m = grid.gethealpix(nside = 256)
+    #healpy.mollview(m, nest=True)
+    healpy.cartview(m, nest = True, lonra = [-10, 10], latra = [-10, 10])
+    plt.show()
+    #print UL
+
+def halo():
+    # Set stage
+    grid = hp.Harpix().adddisc(vec = (1, 0, 0), radius = 2, nside = 256)
+    #grid.addsingularity((0,0), 0.3, 2, n = 1000)
+    expo = 10
+
+    r = lambda l, b: np.sqrt(l**2 + b**2)
+
+    # Signal shape
+    sig_shape = hp.zeroslike(grid).addfunc(
+            lambda l, b: 0+1./(r(l, b)+ 10.)**1)
+
+    # Background shapes (and error)
+    bkg_shape = hp.zeroslike(grid).addfunc(
+            lambda l, b: 1./(r(l, b)+1.0)**2)
+    #err_shape = bkg_shape * 0.0001
+    #cov = hp.HarpixSigma1D(err_shape, corrlength = 1.)
+
+    print bkg_shape.getintegral()*expo
+
+    # Background component model
+    bkg_comp = BkgComponent(lambda x: 
+            expo*(
+                bkg_shape.getdata(mul_sr = True)*x[0] 
+                +bkg_shape.getdata(mul_sr = True)**3*x[1] 
+                +bkg_shape.getdata(mul_sr = True)**2.5*x[2] 
+                + x[3]
+                ),
+            x0 = [1e8, 1e8, 1e8, 1.], xerr = [0e3, 0e3, 0e3, 1.0], cov = None)
+    SF = bkg_comp.getSwordfish()
+
+    # Signal model
+    #S = np.multiply.outer(sig_shape.getdata(mul_sr = True), sig_spec).flatten()
+    S = sig_shape.getdata(mul_sr = True)
+
+    #UL = SF.upperlimit(S, 0.05)
+    print 'infoflux...'
+    F = SF.infoflux(S*expo, solver = 'direct')
+    print '...done'
+    grid.data = F
+    grid._div_sr()
+    m = grid.gethealpix(nside = 256)
+    #healpy.mollview(m, nest=True)
+    healpy.cartview(m, nest = True, lonra = [-10, 10], latra = [-10, 10])
+    plt.show()
+    #print UL
+
+
+if __name__ == "__main__":
+    #test0()
+    #test1()
+    #test2()
+    #test3()
+    halo()

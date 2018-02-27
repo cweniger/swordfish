@@ -42,9 +42,12 @@ import scipy.sparse.linalg as la
 import scipy.sparse as sp
 from scipy import stats
 from scipy.special import gammaln
-from scipy.linalg import sqrtm
+from scipy.linalg import sqrtm, eigvals
 from scipy.optimize import fmin_l_bfgs_b, brentq
+from sklearn.neighbors import BallTree
+from sklearn.linear_model import Ridge
 import copy
+from tqdm import tqdm
 
 import swordfish.metricplot as mp
 
@@ -1010,8 +1013,17 @@ class SignalHandler(object):
             return self.P[ind], ind, dist
         else:
             return self.P[ind]
+
+    def shell(self, mask, sigma = 1):
+        ind = self.treeX.query_radius(self.X[mask], r=sigma)
+        ind = np.array(list(set([item for sublist in ind for item in
+            sublist])))
+        mask = np.zeros(len(self.X), dtype=bool)
+        mask[ind] = True
+        return mask
         
-    def Volume(self, sigma = 1.):
+    def volume(self, sigma = 1., mask = None, estimate_dim = True,
+            return_weights = False):
         r"""Estimates the total 'volume' of euclideanized space 
         Parameters
         ----------
@@ -1020,19 +1032,29 @@ class SignalHandler(object):
         Returns
         -------
         * Volume
+        * Volume, Weights (if return_weights is True)
         """
         from scipy.stats import chi2
-        weights = self.treeX.query_radius(self.X, r=sigma, count_only = True)
-        d = self.estimate_dim(self.X)
+        print 'Calculating weights...'
+        X = self.X[mask] if mask is not None else self.X
+        weights = self.treeX.query_radius(X, r=sigma, count_only = True)
+        print '...done!'
+        if estimate_dim:
+            d = self.estimate_dim(X)
+        else:
+            d = np.ones(len(weights))
         R = chi2.ppf(0.683,d) # TODO: Fix to match sigma and the percentage
-        packing_frac = array([0., 1., 1.*pi*sqrt(3.)/6., 1.*pi*sqrt(2.)/6.,
-                        pi**2./16., pi**2.*sqrt(2)/30, pi**3.*sqrt(3)/144,
-                        pi**3./105, pi**4./384.])
+        packing_frac = np.array([0., 1., 1.*np.pi*np.sqrt(3.)/6., 1.*np.pi*np.sqrt(2.)/6.,
+                        np.pi**2./16., np.pi**2.*np.sqrt(2)/30, np.pi**3.*np.sqrt(3)/144,
+                        np.pi**3./105, np.pi**4./384.])
         packing = []
         for i in d:
             packing.append(packing_frac[int(i)])
         vol = sum(packing*R**(-d)/weights)
-        return vol
+        if return_weights:
+            return vol, 1./weights
+        else:
+            return vol
     
     def estimate_dim(self, points):
         r""" Estimates the dimension of the euclideanized space
@@ -1049,7 +1071,7 @@ class SignalHandler(object):
         """
         dim = []
         n_coords = len(points[0,:])
-        for i in range(len(points[:,0])):
+        for i in tqdm(range(len(points[:,0])), desc='Estimating dimensions'):
             mean = []
             P0 = points[i,:].reshape(1, -1)
             # Find closest 10 associated points

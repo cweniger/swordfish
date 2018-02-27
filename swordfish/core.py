@@ -100,6 +100,8 @@ class Swordfish(object):
 
         if E is None:
             E = np.ones(nbins)
+        elif type(E) == float:
+            E = np.ones(nbins)*E
         else:
             E = np.array(E, dtype='float64').flatten()
 
@@ -230,7 +232,7 @@ class Swordfish(object):
         I = self.fishermatrix(S, S0 = S0)
         return np.linalg.linalg.inv(I)
 
-    def infoflux(self, S, S0 = None):
+    def infoflux(self, S, S0 = None, solver = 'direct'):
         """Return Fisher information flux.
 
         Parameters
@@ -246,7 +248,7 @@ class Swordfish(object):
         * `F` [array like]:
           Fisher information flux.
         """
-        SF, n = self._sf_factory(S, extraB = S0)
+        SF, n = self._sf_factory(S, extraB = S0, solver = solver)
         assert n == 1
         F = SF.effectiveinfoflux(0, theta = None)
         return np.reshape(F, self._shape)
