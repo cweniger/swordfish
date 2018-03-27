@@ -234,6 +234,7 @@ class TensorField(object):
         * `contour` [2-D array]:
             List of contour lines.
         """
+        # TODO: 'levels' docstring incorrect, should be s0
         t = np.linspace(0, s0, 30)
         contour = []
         for phi in np.linspace(0, 2*np.pi, Npoints+1):

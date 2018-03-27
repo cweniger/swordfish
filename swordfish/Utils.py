@@ -36,15 +36,18 @@ cannot handle situations where both happens at the same time.
 
 """
 
-from __future__ import division
+from __future__ import division, print_function
 import numpy as np
 import scipy.sparse.linalg as la
 import scipy.sparse as sp
 from scipy import stats
 from scipy.special import gammaln
-from scipy.linalg import sqrtm
+from scipy.linalg import sqrtm, eigvals
 from scipy.optimize import fmin_l_bfgs_b, brentq
+from sklearn.neighbors import BallTree
+from sklearn.linear_model import Ridge
 import copy
+from tqdm import tqdm
 
 import swordfish.metricplot as mp
 
@@ -158,6 +161,8 @@ class LinModel(object):
 
     @staticmethod
     def _get_auto_scale(flux, exposure):
+        #print exposure.min(), exposure.max()
+        #print flux.min(), flux.max()
         return np.array(
                 [1./(f*exposure).max() for f in flux]
                 )
@@ -228,7 +233,7 @@ class LinModel(object):
         elif self._sysflag and self._solver == "cg":
             def callback(x):
                 if self._verbose:
-                    print len(x), sum(x), np.mean(x)
+                    print(len(x), sum(x), np.mean(x))
             for i in range(self._ncomp):
                 x0 = self._flux[i]/noise if self._cache is None else self._cache/exposure
                 x[i] = la.cg(D, self._flux[i]*exposure, x0 = x0, callback = callback, tol = 1e-3)[0]
@@ -504,9 +509,9 @@ class LinModel(object):
             return self.lnL(theta0, theta, mu_overwrite = mu_overwrite)
         result = fmin_l_bfgs_b(f, x0, fprime, approx_grad = False)
         if self._verbose:
-            print "Best-fit parameters:", result[0]
+            print("Best-fit parameters:", result[0])
         if self._at_bound:
-            print "WARNING: No maximum with non-negative flux found."
+            print("WARNING: No maximum with non-negative flux found.")
             return -result[1]
         else:
             return -result[1]
@@ -543,7 +548,7 @@ class EuclideanizedSignal(object):
         # TODO: Add all components and their errors to D
 
         D = D(np.eye(self._model._nbins))  # transform to dense matrix
-        invD = np.linalg.linalg.inv(D)
+        invD = np.linalg.inv(D)
         A2 = np.diag(exposure).dot(invD).dot(np.diag(exposure))
         A = sqrtm(A2)
         Kdiag = np.diag(self._model._systematics.dot(np.eye(self._model._nbins)))
