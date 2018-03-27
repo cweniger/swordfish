@@ -36,7 +36,7 @@ cannot handle situations where both happens at the same time.
 
 """
 
-from __future__ import division
+from __future__ import division, print_function
 import numpy as np
 import scipy.sparse.linalg as la
 import scipy.sparse as sp
@@ -233,7 +233,7 @@ class LinModel(object):
         elif self._sysflag and self._solver == "cg":
             def callback(x):
                 if self._verbose:
-                    print len(x), sum(x), np.mean(x)
+                    print(len(x), sum(x), np.mean(x))
             for i in range(self._ncomp):
                 x0 = self._flux[i]/noise if self._cache is None else self._cache/exposure
                 x[i] = la.cg(D, self._flux[i]*exposure, x0 = x0, callback = callback, tol = 1e-3)[0]
@@ -509,9 +509,9 @@ class LinModel(object):
             return self.lnL(theta0, theta, mu_overwrite = mu_overwrite)
         result = fmin_l_bfgs_b(f, x0, fprime, approx_grad = False)
         if self._verbose:
-            print "Best-fit parameters:", result[0]
+            print("Best-fit parameters:", result[0])
         if self._at_bound:
-            print "WARNING: No maximum with non-negative flux found."
+            print("WARNING: No maximum with non-negative flux found.")
             return -result[1]
         else:
             return -result[1]
@@ -974,10 +974,10 @@ class SignalHandler(object):
         -------
         *
         """
-        if self.verbose: print "Initializing ball trees for nearest neighbour searches..."
+        if self.verbose: print("Initializing ball trees for nearest neighbour searches...")
         self.treeX = BallTree(self.X, leaf_size=40)
         self.treeP = BallTree(self.P, leaf_size=40)
-        if self.verbose: print "...done!"
+        if self.verbose: print("...done!")
             
     def query_region(self, P0, sigma, return_indices = False, return_distance = False):
         r"""
@@ -990,7 +990,7 @@ class SignalHandler(object):
         """
         # Obtain index of nearest parameter sample
         i0 = self.treeP.query([P0], k = 1, return_distance = False)[0][0]
-        #print i0, self.P[i0]
+        #print(i0, self.P[i0]
         
         # Obtain 1-sigma region around that parameter point and train linear predictor
         ind_interp = self.treeX.query_radius([self.X[i0]], r = 1.)[0]
@@ -1000,13 +1000,13 @@ class SignalHandler(object):
         # Estimate X0
         X0 = clf.predict([P0])[0]
         if ((X0 - self.X[i0])**2).sum() > 1.:
-            print "WARNING: Signal extrapolated beyond sample points."
+            print("WARNING: Signal extrapolated beyond sample points.")
             
         # Obtain region around X0
         ind, dist = self.treeX.query_radius([X0], r = sigma, return_distance = True)
         ind = ind[0]
         dist = dist[0]
-        print ind.shape
+        print(ind.shape)
         if return_indices:
             return self.P[ind], ind
         elif return_distance:
@@ -1035,10 +1035,10 @@ class SignalHandler(object):
         * Volume, Weights (if return_weights is True)
         """
         from scipy.stats import chi2
-        print 'Calculating weights...'
+        print('Calculating weights...')
         X = self.X[mask] if mask is not None else self.X
         weights = self.treeX.query_radius(X, r=sigma, count_only = True)
-        print '...done!'
+        print('...done!')
         if estimate_dim:
             d = self.estimate_dim(X)
         else:
@@ -1077,7 +1077,7 @@ class SignalHandler(object):
             # Find closest 10 associated points
             dist, ind = self.treeX.query(P0, k=10)
             if dist.max() > 10:
-                print "WARNING: Less than 10 points within 1 sigma radius"
+                print("WARNING: Less than 10 points within 1 sigma radius")
             X = np.array(self.X)
             # Construct mean vector
             meanV = []
