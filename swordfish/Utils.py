@@ -1110,3 +1110,28 @@ class SignalHandler(object):
         A = clf.coef_
         I = A.T.dot(A)
         return I
+
+    def get_benchmarks(self, sigma = 1.):
+        signi = (self.X**2).sum(axis=1)**0.5
+        mask = np.ones(len(self.X), dtype='bool')
+        i = np.argmax(signi)
+        benchmarks = []
+        pool = set()
+        while mask.sum() > 0:
+            benchmarks.append(i)
+            ind, dist = self.treeX.query_radius([self.X[i]], r = 2.1*sigma, return_distance = True)
+            ind, dist = ind[0], dist[0]
+            mask[ind[dist < 1.9*sigma]] = False
+            ind_shell = ind[dist >= 2.0*sigma]
+            ind_shell2 = ind_shell[mask[ind_shell]]
+            if len(pool) == 0:
+                pool = set(ind_shell2)
+            else:
+                pool = pool.intersection(ind_shell2)
+            if len(pool) == 0:
+                i = np.argmax(signi)
+                signi[np.logical_not(mask)] = 0
+                i = np.argmax(signi)
+            else:
+                i = next(iter(pool))
+        return benchmarks
