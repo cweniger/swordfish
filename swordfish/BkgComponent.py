@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+from __future__ import division
 import numpy as np
 import swordfish as sf
 import scipy.sparse.linalg as la
@@ -308,7 +308,7 @@ def test3():
     # Set stage
     grid = hp.Harpix().adddisc(vec = (1, 0, 0), radius = 2, nside = 1024)
     #grid.addsingularity((0,0), 0.3, 2, n = 1000)
-    print len(grid.data)
+    print(len(grid.data))
     #quit()
     E = np.linspace(1, 2, 2)
 
@@ -334,9 +334,9 @@ def test3():
     S = np.multiply.outer(sig_shape.getdata(mul_sr = True), sig_spec).flatten()
 
     #UL = SF.upperlimit(S, 0.05)
-    print 'infoflux...'
+    print('infoflux...')
     F = SF.infoflux(S, solver = 'cg').reshape(-1, 2)
-    print '...done'
+    print('...done')
     grid.data = F[:,1]
     grid._div_sr()
     m = grid.gethealpix(nside = 256)
@@ -363,7 +363,7 @@ def halo():
     #err_shape = bkg_shape * 0.0001
     #cov = hp.HarpixSigma1D(err_shape, corrlength = 1.)
 
-    print bkg_shape.getintegral()*expo
+    print(bkg_shape.getintegral()*expo)
 
     # Background component model
     bkg_comp = BkgComponent(lambda x: 
@@ -381,9 +381,9 @@ def halo():
     S = sig_shape.getdata(mul_sr = True)
 
     #UL = SF.upperlimit(S, 0.05)
-    print 'infoflux...'
+    print('infoflux...')
     F = SF.infoflux(S*expo, solver = 'direct')
-    print '...done'
+    print('...done')
     grid.data = F
     grid._div_sr()
     m = grid.gethealpix(nside = 256)

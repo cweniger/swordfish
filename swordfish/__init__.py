@@ -81,5 +81,5 @@ and
 from swordfish.core import *
 from swordfish.metricplot import *
 from swordfish.Utils import *
-from swordfish.BkgComponent import *
+# from swordfish.BkgComponent import *
 __all__ = ["Swordfish", "Utils", "metricplot", "BkgComponent"]
