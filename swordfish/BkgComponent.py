@@ -224,16 +224,28 @@ def test0():
 
 def test1():
     E = np.linspace(0, 1, 10)
-    l = np.linspace(0, 1, 20)
+    l = np.linspace(0, 1, 8)
+    l = np.meshgrid(l,l)[0]
     M = lambda x: np.sin(l*20*x[1])*x[0]+2
     S = lambda x: x[0]*(E+1)
-    m = BkgComponent(M, x0 = [1., .5], xerr = [0.1, 0.1])
+    cov = np.ones((64, 64))*0.1
+    E1, E2 = np.meshgrid((E, E))
+    sigma = 
+    cov = np.exp(-0.5*(E1-E2)**2/sigma**2)*0.01
+    m = BkgComponent(M, x0 = [1., .5], xerr = [0.1, 0.1], cov = cov)
     s = BkgComponent(S, x0 = [1.], xerr = [0.2])
     ms = m.tensordot(s)
+    M3 = lambda x: x[0]*np.ones((8, 8, 10))
+    bg3 = BkgComponent(M3, x0 = [1.], xerr = [0.001])
+    ms = ms + bg3
+
+#    E = np.logspace(....)
+#    M = lambda x: (E/E0)**x[1]*x[0]
 
     SF = ms.getSwordfish(ignore_cov = False)
     UL = SF.upperlimit(ms().flatten(), 0.05, force_gaussian = True,
             solver='direct')
+    print UL
     #F = SF.infoflux(ms().flatten())
 
     #B = ms().flatten()
@@ -383,7 +395,7 @@ def halo():
 
 if __name__ == "__main__":
     #test0()
-    #test1()
+    test1()
     #test2()
     #test3()
-    halo()
+    #halo()
