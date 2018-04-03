@@ -979,7 +979,7 @@ class SignalHandler(object):
         self.treeP = BallTree(self.P, leaf_size=40)
         if self.verbose: print("...done!")
             
-    def query_region(self, P0, sigma, return_indices = False, return_distance = False):
+    def query_region(self, P0, sigma=2., return_indices = False, return_distance = False):
         r"""
         Parameters
         ----------
@@ -1014,7 +1014,7 @@ class SignalHandler(object):
         else:
             return self.P[ind]
 
-    def shell(self, mask, sigma = 1):
+    def shell(self, mask, sigma = 1.):
         ind = self.treeX.query_radius(self.X[mask], r=sigma)
         ind = np.array(list(set([item for sublist in ind for item in
             sublist])))
@@ -1028,13 +1028,16 @@ class SignalHandler(object):
         Parameters
         ----------
         * sigma:
-            The level at which you would like to discriminate models
+            The level at which you would like to discriminate models, allowed values
+            are 1., 4. (default), and 9.
         Returns
         -------
         * Volume
         * Volume, Weights (if return_weights is True)
         """
         from scipy.stats import chi2
+        Sig = np.array([[1., 2., 3.],[0.6827,0.9545,0.9973]])
+        perc = float(Sig[1,np.where(Sig == sigma)[1]])
         print('Calculating weights...')
         X = self.X[mask] if mask is not None else self.X
         weights = self.treeX.query_radius(X, r=sigma, count_only = True)
@@ -1043,11 +1046,16 @@ class SignalHandler(object):
             d = self.estimate_dim(X)
         else:
             d = np.ones(len(weights))
-        R = chi2.ppf(0.683,d) # TODO: Fix to match sigma and the percentage
+        R = chi2.ppf(perc,d)
+        
+        print "Average Dimensionality...", d.mean()
         packing_frac = np.array([0., 1., 1.*np.pi*np.sqrt(3.)/6., 1.*np.pi*np.sqrt(2.)/6.,
                         np.pi**2./16., np.pi**2.*np.sqrt(2)/30, np.pi**3.*np.sqrt(3)/144,
                         np.pi**3./105, np.pi**4./384.])
         packing = []
+        print("Warning: Number of points with less"+
+                " than 10 points within 1 sigma", sum(weights<10.))
+        
         for i in d:
             packing.append(packing_frac[int(i)])
         vol = sum(packing*R**(-d)/weights)
@@ -1071,28 +1079,27 @@ class SignalHandler(object):
         """
         dim = []
         n_coords = len(points[0,:])
+        # Find closest 10 associated points
+        dist, ind = self.treeX.query(points, k=10)
+        
         for i in tqdm(range(len(points[:,0])), desc='Estimating dimensions'):
             mean = []
             P0 = points[i,:].reshape(1, -1)
-            # Find closest 10 associated points
-            dist, ind = self.treeX.query(P0, k=10)
-            if dist.max() > 10:
+            
+            if dist[i].max() > 10:
                 print("WARNING: Less than 10 points within 1 sigma radius")
-            X = np.array(self.X)
-            # Construct mean vector
-            meanV = []
-            for a in range(n_coords):
-                m = X[:,a].mean()
-                meanV.append([m])
-            meanV = np.array(meanV)
+            X = np.array(self.X[ind[i,:],:])
+            meanV = P0
+    
             # Construct Euclideanized Signal scatter matrix
             ES_matrix = np.zeros((n_coords,n_coords))
             for j in range(X.shape[0]):
                 ES_matrix += (X[j,:].reshape(1,n_coords) - meanV).T.dot((X[j,:].reshape(1,n_coords) - meanV))
             # Compute and order eigen values
+            
             eig = eigvals(ES_matrix)
-            dim.append(sum(abs(eig) > abs(1e-2*max(eig))))
-        return array(dim)
+            dim.append(sum(abs(eig) > abs(1e-3*max(eig))))
+        return np.array(dim)
     
     def estimate_I(self, P0, sigma = 1.):
         r"""
@@ -1135,3 +1142,4 @@ class SignalHandler(object):
             else:
                 i = next(iter(pool))
         return benchmarks
+
