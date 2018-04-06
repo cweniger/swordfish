@@ -1014,7 +1014,7 @@ class SignalHandler(object):
         else:
             return self.P[ind]
 
-    def shell(self, mask, sigma = 1.):
+    def shell(self, mask, sigma = 2.):
         ind = self.treeX.query_radius(self.X[mask], r=sigma)
         ind = np.array(list(set([item for sublist in ind for item in
             sublist])))
@@ -1022,7 +1022,7 @@ class SignalHandler(object):
         mask[ind] = True
         return mask
         
-    def volume(self, sigma = 1., mask = None, estimate_dim = True,
+    def volume(self, sigma = 2., mask = None, estimate_dim = True,
             return_weights = False):
         r"""Estimates the total 'volume' of euclideanized space 
         Parameters
@@ -1040,15 +1040,16 @@ class SignalHandler(object):
         perc = float(Sig[1,np.where(Sig == sigma)[1]])
         print('Calculating weights...')
         X = self.X[mask] if mask is not None else self.X
-        weights = self.treeX.query_radius(X, r=sigma, count_only = True)
-        print('...done!')
         if estimate_dim:
             d = self.estimate_dim(X)
         else:
-            d = np.ones(len(weights))
-        R = chi2.ppf(perc,d)
+            d = np.ones(len(X))
+    
+        R = np.sqrt(chi2.ppf(perc,d))/2.
+        weights = self.treeX.query_radius(X, r=R, count_only = True)
+        print('...done!')
         
-        print "Average Dimensionality...", d.mean()
+        print("Average Dimensionality...", d.mean())
         packing_frac = np.array([0., 1., 1.*np.pi*np.sqrt(3.)/6., 1.*np.pi*np.sqrt(2.)/6.,
                         np.pi**2./16., np.pi**2.*np.sqrt(2)/30, np.pi**3.*np.sqrt(3)/144,
                         np.pi**3./105, np.pi**4./384.])
@@ -1101,7 +1102,7 @@ class SignalHandler(object):
             dim.append(sum(abs(eig) > abs(1e-3*max(eig))))
         return np.array(dim)
     
-    def estimate_I(self, P0, sigma = 1.):
+    def estimate_I(self, P0, sigma = 2.):
         r"""
         Parameters
         ----------
@@ -1118,7 +1119,7 @@ class SignalHandler(object):
         I = A.T.dot(A)
         return I
 
-    def get_benchmarks(self, sigma = 1.):
+    def get_benchmarks(self, sigma = 2.):
         signi = (self.X**2).sum(axis=1)**0.5
         mask = np.ones(len(self.X), dtype='bool')
         i = np.argmax(signi)
@@ -1142,4 +1143,3 @@ class SignalHandler(object):
             else:
                 i = next(iter(pool))
         return benchmarks
-
