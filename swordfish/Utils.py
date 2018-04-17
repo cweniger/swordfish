@@ -1090,12 +1090,12 @@ class SignalHandler(object):
             if dist[i].max() > 10:
                 print("WARNING: Less than 10 points within 1 sigma radius")
             X = np.array(self.X[ind[i,:],:])
-            meanV = P0
+            meanV = P0.real
     
             # Construct Euclideanized Signal scatter matrix
             ES_matrix = np.zeros((n_coords,n_coords))
             for j in range(X.shape[0]):
-                ES_matrix += (X[j,:].reshape(1,n_coords) - meanV).T.dot((X[j,:].reshape(1,n_coords) - meanV))
+                ES_matrix += (X[j,:].reshape(1,n_coords).real - meanV.real).T.dot((X[j,:].reshape(1,n_coords).real - meanV.real))
             # Compute and order eigen values
             
             eig = eigvals(ES_matrix)
@@ -1129,7 +1129,7 @@ class SignalHandler(object):
             benchmarks.append(i)
             ind, dist = self.treeX.query_radius([self.X[i]], r = 2.1*sigma, return_distance = True)
             ind, dist = ind[0], dist[0]
-            mask[ind[dist < 1.9*sigma]] = False
+            mask[ind[dist < 1.8*sigma]] = False
             ind_shell = ind[dist >= 2.0*sigma]
             ind_shell2 = ind_shell[mask[ind_shell]]
             if len(pool) == 0:
