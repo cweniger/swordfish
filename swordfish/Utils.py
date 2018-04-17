@@ -1006,7 +1006,7 @@ class SignalHandler(object):
         ind, dist = self.treeX.query_radius([X0], r = sigma, return_distance = True)
         ind = ind[0]
         dist = dist[0]
-        print(ind.shape)
+        
         if return_indices:
             return self.P[ind], ind
         elif return_distance:
