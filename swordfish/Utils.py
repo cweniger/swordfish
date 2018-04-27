@@ -967,12 +967,7 @@ class SignalHandler(object):
     
     def _init_BallTree(self):
         r"""
-        Parameters
-        ----------
-        *
-        Returns
-        -------
-        *
+        Initializes ball trees, ready for nearest neighbour queries
         """
         if self.verbose: print("Initializing ball trees for nearest neighbour searches...")
         self.treeX = BallTree(self.X, leaf_size=40)
@@ -980,13 +975,20 @@ class SignalHandler(object):
         if self.verbose: print("...done!")
             
     def query_region(self, P0, sigma=2., return_indices = False, return_distance = False):
-        r"""
+        r"""Return points within a queried region
+
         Parameters
         ----------
-        *
+        * 'P0' [ndarry, shape=(number of parameters)]
+        * Sigma corresponds to the radius of the sphere
         Returns
         -------
-        *
+        * if return_indices = True
+            Parameters of points within quried region [ndarray, shape=(number of points, number of parameters)], indices
+        * if return_distance = True and return_indices = True
+            Parameters of points within quried region [ndarray, shape=(number of points, number of parameters)], indices, distance to each point
+        * if return_distance = True
+            Parameters of points within quried region [ndarray, shape=(number of points, number of parameters)]
         """
         # Obtain index of nearest parameter sample
         i0 = self.treeP.query([P0], k = 1, return_distance = False)[0][0]
@@ -1015,6 +1017,19 @@ class SignalHandler(object):
             return self.P[ind]
 
     def shell(self, mask, sigma = 2.):
+        r"""Calculates all points within a given distance of a predefined mask 
+        Parameters
+        ----------
+        * mask [ndarry, shape=(len(P))]:
+            boolean array indicating which points form initial mask
+        * sigma:
+            The level at which you would like to discriminate models, allowed values
+            are 1., 4. (default), and 9.
+        Returns
+        -------
+        * mask [ndarry, shape=(len(P))]:
+            boolean array indicating which points are within a given distance of original mask
+        """
         ind = self.treeX.query_radius(self.X[mask], r=sigma)
         ind = np.array(list(set([item for sublist in ind for item in
             sublist])))
