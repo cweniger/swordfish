@@ -1038,7 +1038,7 @@ class SignalHandler(object):
         return mask
         
     def volume(self, sigma = 2., mask = None, estimate_dim = True,
-            return_weights = False, return_individual=False):
+            return_weights = False, return_individual=False, return_d=False):
         r"""Estimates the total 'volume' of euclideanized space 
         Parameters
         ----------
@@ -1075,6 +1075,8 @@ class SignalHandler(object):
         for i in d:
             packing.append(packing_frac[int(i)])
         vol = sum(packing*R**(-d)/weights)
+        if return_d:
+            return vol, d
         if return_individual:
             return vol, packing*R**(-d)/weights
         if return_weights:
