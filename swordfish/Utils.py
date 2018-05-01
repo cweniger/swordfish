@@ -1037,7 +1037,7 @@ class SignalHandler(object):
         mask[ind] = True
         return mask
         
-    def volume(self, sigma = 2., mask = None, estimate_dim = True,
+    def volume(self, sigma = 2., mask = None, d = 1., estimate_dim = False,
             return_weights = False, return_individual=False, return_d=False):
         r"""Estimates the total 'volume' of euclideanized space 
         Parameters
@@ -1056,9 +1056,10 @@ class SignalHandler(object):
         print('Calculating weights...')
         X = self.X[mask] if mask is not None else self.X
         if estimate_dim:
+            print("WARNING: Estimating Dimension set to true, d will be overwritten...")
             d = self.estimate_dim(X)
         else:
-            d = np.ones(len(X))
+            d = np.ones(len(X))*d
     
         R = np.sqrt(chi2.ppf(perc,d))/2.
         weights = self.treeX.query_radius(X, r=R, count_only = True)
