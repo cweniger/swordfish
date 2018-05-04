@@ -1075,11 +1075,11 @@ class SignalHandler(object):
         
         for i in d:
             packing.append(packing_frac[int(i)])
-        vol = sum(packing*R**(-d)/weights)
+        vol = sum(packing/weights)
         if return_d:
             return vol, d
         if return_individual:
-            return vol, packing*R**(-d)/weights
+            return vol, packing/weights
         if return_weights:
             return vol, 1./weights
         else:
