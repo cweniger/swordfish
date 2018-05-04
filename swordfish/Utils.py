@@ -974,7 +974,7 @@ class SignalHandler(object):
         self.treeP = BallTree(self.P, leaf_size=40)
         if self.verbose: print("...done!")
             
-    def query_region(self, P0, sigma=2., return_indices = False, return_distance = False):
+    def query_region(self, P0, sigma=2., d=1., return_indices = False, return_distance = False):
         r"""Return points within a queried region
 
         Parameters
@@ -991,6 +991,10 @@ class SignalHandler(object):
             Parameters of points within quried region [ndarray, shape=(number of points, number of parameters)]
         """
         # Obtain index of nearest parameter sample
+        Sig = np.array([[1., 2., 3.],[0.6827,0.9545,0.9973]])
+        perc = float(Sig[1,np.where(Sig == sigma)[1]])
+        R = np.sqrt(chi2.ppf(perc,d))
+
         i0 = self.treeP.query([P0], k = 1, return_distance = False)[0][0]
         #print(i0, self.P[i0]
         
@@ -1005,7 +1009,7 @@ class SignalHandler(object):
             print("WARNING: Signal extrapolated beyond sample points.")
             
         # Obtain region around X0
-        ind, dist = self.treeX.query_radius([X0], r = sigma, return_distance = True)
+        ind, dist = self.treeX.query_radius([X0], r = R, return_distance = True)
         ind = ind[0]
         dist = dist[0]
         
@@ -1053,6 +1057,7 @@ class SignalHandler(object):
         from scipy.stats import chi2
         Sig = np.array([[1., 2., 3.],[0.6827,0.9545,0.9973]])
         perc = float(Sig[1,np.where(Sig == sigma)[1]])
+
         print('Calculating weights...')
         X = self.X[mask] if mask is not None else self.X
         if estimate_dim:
@@ -1165,7 +1170,7 @@ class SignalHandler(object):
         return benchmarks
 
     def get_benchmarks2(self, sigma = 1.):
-        """Always take maximum."""
+        """Always take maximum. Sigma is actually the Euclidean distance"""
         signi = (self.X**2).sum(axis=1)**0.5
         mask = np.ones(len(self.X), dtype='bool')
         i = np.argmax(signi)
