@@ -1011,8 +1011,9 @@ class SignalHandler(object):
             
         # Obtain region around X0
         ind, dist = self.treeX.query_radius([X0], r = R, return_distance = True)
-        # ind = ind[0]
-        # dist = dist[0]
+        print(ind, dist)
+        ind = ind[0]
+        dist = dist[0]
         
         if return_indices:
             return self.P[ind], ind
