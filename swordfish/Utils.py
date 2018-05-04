@@ -1135,3 +1135,18 @@ class SignalHandler(object):
             else:
                 i = next(iter(pool))
         return benchmarks
+
+    def get_benchmarks2(self, sigma = 1.):
+        """Always take maximum."""
+        signi = (self.X**2).sum(axis=1)**0.5
+        mask = np.ones(len(self.X), dtype='bool')
+        i = np.argmax(signi)
+        benchmarks = []
+        while mask.sum() > 0:
+            i = np.argmax(signi)
+            benchmarks.append(i)
+            ind, dist = self.treeX.query_radius([self.X[i]], r = 1.95*sigma, return_distance = True)
+            ind, dist = ind[0], dist[0]
+            mask[ind] = False
+            signi[ind] = 0.
+        return benchmarks
