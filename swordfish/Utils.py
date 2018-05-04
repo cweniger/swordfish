@@ -48,6 +48,7 @@ from sklearn.neighbors import BallTree
 from sklearn.linear_model import Ridge
 import copy
 from tqdm import tqdm
+from scipy.stats import chi2
 
 import swordfish.metricplot as mp
 
@@ -950,7 +951,6 @@ class Funkfish(object):
 class SignalHandler(object):
     r""" Handles the nearest neighbour finder for a some selection of points using the Euclideanized signal 
     """
-    from scipy.stats import chi2
     def __init__(self, P, X, verbose = False):
         r"""Initialises the class
         Parameters
