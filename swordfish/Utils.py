@@ -967,26 +967,28 @@ class SignalHandler(object):
     
     def _init_BallTree(self):
         r"""
-        Parameters
-        ----------
-        *
-        Returns
-        -------
-        *
+        Initializes ball trees, ready for nearest neighbour queries
         """
         if self.verbose: print("Initializing ball trees for nearest neighbour searches...")
         self.treeX = BallTree(self.X, leaf_size=40)
         self.treeP = BallTree(self.P, leaf_size=40)
         if self.verbose: print("...done!")
             
-    def query_region(self, P0, sigma, return_indices = False, return_distance = False):
-        r"""
+    def query_region(self, P0, sigma=2., return_indices = False, return_distance = False):
+        r"""Return points within a queried region
+
         Parameters
         ----------
-        *
+        * 'P0' [ndarry, shape=(number of parameters)]
+        * Sigma corresponds to the radius of the sphere
         Returns
         -------
-        *
+        * if return_indices = True
+            Parameters of points within quried region [ndarray, shape=(number of points, number of parameters)], indices
+        * if return_distance = True and return_indices = True
+            Parameters of points within quried region [ndarray, shape=(number of points, number of parameters)], indices, distance to each point
+        * if return_distance = True
+            Parameters of points within quried region [ndarray, shape=(number of points, number of parameters)]
         """
         # Obtain index of nearest parameter sample
         i0 = self.treeP.query([P0], k = 1, return_distance = False)[0][0]
@@ -1006,7 +1008,7 @@ class SignalHandler(object):
         ind, dist = self.treeX.query_radius([X0], r = sigma, return_distance = True)
         ind = ind[0]
         dist = dist[0]
-        print(ind.shape)
+        
         if return_indices:
             return self.P[ind], ind
         elif return_distance:
@@ -1014,7 +1016,20 @@ class SignalHandler(object):
         else:
             return self.P[ind]
 
-    def shell(self, mask, sigma = 1):
+    def shell(self, mask, sigma = 2.):
+        r"""Calculates all points within a given distance of a predefined mask 
+        Parameters
+        ----------
+        * mask [ndarry, shape=(len(P))]:
+            boolean array indicating which points form initial mask
+        * sigma:
+            The level at which you would like to discriminate models, allowed values
+            are 1., 4. (default), and 9.
+        Returns
+        -------
+        * mask [ndarry, shape=(len(P))]:
+            boolean array indicating which points are within a given distance of original mask
+        """
         ind = self.treeX.query_radius(self.X[mask], r=sigma)
         ind = np.array(list(set([item for sublist in ind for item in
             sublist])))
@@ -1022,35 +1037,49 @@ class SignalHandler(object):
         mask[ind] = True
         return mask
         
-    def volume(self, sigma = 1., mask = None, estimate_dim = True,
-            return_weights = False):
+    def volume(self, sigma = 2., mask = None, d = 1., estimate_dim = False,
+            return_weights = False, return_individual=False, return_d=False):
         r"""Estimates the total 'volume' of euclideanized space 
         Parameters
         ----------
         * sigma:
-            The level at which you would like to discriminate models
+            The level at which you would like to discriminate models, allowed values
+            are 1., 4. (default), and 9.
         Returns
         -------
         * Volume
         * Volume, Weights (if return_weights is True)
         """
         from scipy.stats import chi2
+        Sig = np.array([[1., 2., 3.],[0.6827,0.9545,0.9973]])
+        perc = float(Sig[1,np.where(Sig == sigma)[1]])
         print('Calculating weights...')
         X = self.X[mask] if mask is not None else self.X
-        weights = self.treeX.query_radius(X, r=sigma, count_only = True)
-        print('...done!')
         if estimate_dim:
+            print("WARNING: Estimating Dimension set to true, d will be overwritten...")
             d = self.estimate_dim(X)
         else:
-            d = np.ones(len(weights))
-        R = chi2.ppf(0.683,d) # TODO: Fix to match sigma and the percentage
+            d = np.ones(len(X))*d
+    
+        R = np.sqrt(chi2.ppf(perc,d))/2.
+        weights = self.treeX.query_radius(X, r=R, count_only = True)
+        print('...done!')
+        
+        print("Average Dimensionality...", d.mean())
         packing_frac = np.array([0., 1., 1.*np.pi*np.sqrt(3.)/6., 1.*np.pi*np.sqrt(2.)/6.,
                         np.pi**2./16., np.pi**2.*np.sqrt(2)/30, np.pi**3.*np.sqrt(3)/144,
                         np.pi**3./105, np.pi**4./384.])
         packing = []
+        print("Warning: Number of points with less"+
+                " than 10 points within 1 sigma", sum(weights<10.))
+        
         for i in d:
             packing.append(packing_frac[int(i)])
         vol = sum(packing*R**(-d)/weights)
+        if return_d:
+            return vol, d
+        if return_individual:
+            return vol, packing*R**(-d)/weights
         if return_weights:
             return vol, 1./weights
         else:
@@ -1071,30 +1100,29 @@ class SignalHandler(object):
         """
         dim = []
         n_coords = len(points[0,:])
+        # Find closest 10 associated points
+        dist, ind = self.treeX.query(points, k=10)
+        
         for i in tqdm(range(len(points[:,0])), desc='Estimating dimensions'):
             mean = []
             P0 = points[i,:].reshape(1, -1)
-            # Find closest 10 associated points
-            dist, ind = self.treeX.query(P0, k=10)
-            if dist.max() > 10:
+            
+            if dist[i].max() > 10:
                 print("WARNING: Less than 10 points within 1 sigma radius")
-            X = np.array(self.X)
-            # Construct mean vector
-            meanV = []
-            for a in range(n_coords):
-                m = X[:,a].mean()
-                meanV.append([m])
-            meanV = np.array(meanV)
+            X = np.array(self.X[ind[i,:],:])
+            meanV = P0.real
+    
             # Construct Euclideanized Signal scatter matrix
             ES_matrix = np.zeros((n_coords,n_coords))
             for j in range(X.shape[0]):
-                ES_matrix += (X[j,:].reshape(1,n_coords) - meanV).T.dot((X[j,:].reshape(1,n_coords) - meanV))
+                ES_matrix += (X[j,:].reshape(1,n_coords).real - meanV.real).T.dot((X[j,:].reshape(1,n_coords).real - meanV.real))
             # Compute and order eigen values
+            
             eig = eigvals(ES_matrix)
-            dim.append(sum(abs(eig) > abs(1e-2*max(eig))))
-        return array(dim)
+            dim.append(sum(abs(eig) > abs(1e-3*max(eig))))
+        return np.array(dim)
     
-    def estimate_I(self, P0, sigma = 1.):
+    def estimate_I(self, P0, sigma = 2.):
         r"""
         Parameters
         ----------
@@ -1111,7 +1139,7 @@ class SignalHandler(object):
         I = A.T.dot(A)
         return I
 
-    def get_benchmarks(self, sigma = 1.):
+    def get_benchmarks(self, sigma = 2.):
         signi = (self.X**2).sum(axis=1)**0.5
         mask = np.ones(len(self.X), dtype='bool')
         i = np.argmax(signi)
@@ -1121,7 +1149,7 @@ class SignalHandler(object):
             benchmarks.append(i)
             ind, dist = self.treeX.query_radius([self.X[i]], r = 2.1*sigma, return_distance = True)
             ind, dist = ind[0], dist[0]
-            mask[ind[dist < 1.9*sigma]] = False
+            mask[ind[dist < 1.8*sigma]] = False
             ind_shell = ind[dist >= 2.0*sigma]
             ind_shell2 = ind_shell[mask[ind_shell]]
             if len(pool) == 0:
