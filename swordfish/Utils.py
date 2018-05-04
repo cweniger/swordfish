@@ -1010,10 +1010,9 @@ class SignalHandler(object):
             print("WARNING: Signal extrapolated beyond sample points.")
             
         # Obtain region around X0
-        print(R)
         ind, dist = self.treeX.query_radius([X0], r = R, return_distance = True)
-        ind = ind[0]
-        dist = dist[0]
+        # ind = ind[0]
+        # dist = dist[0]
         
         if return_indices:
             return self.P[ind], ind
