@@ -992,6 +992,7 @@ class SignalHandler(object):
             Parameters of points within quried region [ndarray, shape=(number of points, number of parameters)]
         """
         # Obtain index of nearest parameter sample
+        print "Anything"
         Sig = np.array([[1., 2., 3.],[0.6827,0.9545,0.9973]])
         perc = float(Sig[1,np.where(Sig == sigma)[1]])
         R = np.sqrt(chi2.ppf(perc,d))
