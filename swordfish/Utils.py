@@ -950,6 +950,7 @@ class Funkfish(object):
 class SignalHandler(object):
     r""" Handles the nearest neighbour finder for a some selection of points using the Euclideanized signal 
     """
+    from scipy.stats import chi2
     def __init__(self, P, X, verbose = False):
         r"""Initialises the class
         Parameters
@@ -1054,7 +1055,6 @@ class SignalHandler(object):
         * Volume
         * Volume, Weights (if return_weights is True)
         """
-        from scipy.stats import chi2
         Sig = np.array([[1., 2., 3.],[0.6827,0.9545,0.9973]])
         perc = float(Sig[1,np.where(Sig == sigma)[1]])
 
