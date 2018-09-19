@@ -70,9 +70,9 @@ class Swordfish(object):
             N = np.zeros_like(N)
         else:
             if not isinstance(B, list):
-                B = [np.array(B, dtype='flota64'),]
+                B = [np.array(B, dtype=np.float64),]
             else:
-                B = [np.array(b, dtype='float64') for b in B]
+                B = [np.array(b, dtype=np.float64) for b in B]
                 if len(set([b.shape for b in B])) != 1:
                     raise ValueError("Incompatible shapes in B.")
                 if N is None:
@@ -86,11 +86,11 @@ class Swordfish(object):
         nbins = len(B[0])
 
         if T is None:
-            T = list(np.zeros(len(B), dtype='float64'))
+            T = list(np.zeros(len(B), dtype=np.float64))
         elif not isinstance(T, list):
             T = [float(T),]
         else:
-            T = list(np.array(T, dtype='float64'))
+            T = list(np.array(T, dtype=np.float64))
 
         if len(T) != len(B):
             raise ValueError("T and B must have same length, or T must be None.")
@@ -103,7 +103,7 @@ class Swordfish(object):
         elif type(E) == float:
             E = np.ones(nbins)*E
         else:
-            E = np.array(E, dtype='float64').flatten()
+            E = np.array(E, dtype=np.float64).flatten()
 
         self._B = B  # List of equal-sized arrays
         self._T = T  # List of standard deviations (0., finite or None)
@@ -140,11 +140,11 @@ class Swordfish(object):
           If `True`, dump all background components into `K`.
         """
         if isinstance(S, list):
-            S = [np.array(s, dtype='float64') for s in S]
+            S = [np.array(s, dtype=np.float64) for s in S]
             assert len(set([s.shape for s in S])) == 1.
             assert S[0].shape == self._shape
         else:
-            S = [np.array(S, dtype='float64')]
+            S = [np.array(S, dtype=np.float64)]
         assert S[0].shape == self._shape
         S = [s.flatten() for s in S]
 
@@ -526,7 +526,7 @@ class Swordfish(object):
 
 def _func_to_templates(flux, x, dx = None):
     """Return finite differences for use in LinModel."""
-    x = np.array(x, dtype='float64')
+    x = np.array(x, dtype=np.float64)
     if dx is None:
         dx = x*0.01+0.001
     fluxes = []
