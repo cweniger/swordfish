@@ -122,19 +122,19 @@ class LinModel(object):
         * `verbose` [boolean]:
             If set `True` various methods print additional information.
         """
-        S = np.array(S, dtype='float64')
+        S = np.array(S, dtype=np.float64)
         assert S.ndim == 2, "S is not matrix-like."
         n_comp, n_bins = S.shape
         self._flux = S
 
-        B = np.array(B, dtype='float64')
+        B = np.array(B, dtype=np.float64)
         assert B.shape == (n_bins,), "B has incorrect shape."
         self._noise = B 
 
         if E is None:
-            E = np.ones(n_bins, dtype='float64')
+            E = np.ones(n_bins, dtype=np.float64)
         else:
-            E = np.array(E, dtype='float64')
+            E = np.array(E, dtype=np.float64)
             assert E.shape == (n_bins,), "E has incorrect shape."
         self._exposure = E
 
@@ -173,7 +173,7 @@ class LinModel(object):
         if constraints is not None:
             constraints = np.array(
                 [np.inf if x is None or x == np.inf else x for x in
-                    constraints], dtype = 'float64')
+                    constraints], dtype = np.float64)
             if any(constraints<=0.):
                 raise ValueError("Constraints must be positive or None.")
         else:
@@ -418,8 +418,8 @@ class LinModel(object):
             Log-likelihood and its partial derivatives.
         """
         dmu = deltaB
-        theta = np.array(theta, dtype='float64')
-        theta0 = np.array(theta0, dtype='float64')
+        theta = np.array(theta, dtype=np.float64)
+        theta0 = np.array(theta0, dtype=np.float64)
         mu0 = self._summedNoise(theta0)*self._exposure
         systnoise = self._summedNoise(theta0)*epsilon/self._exposure
         if mu_overwrite is None:
@@ -480,8 +480,8 @@ class LinModel(object):
         * `profile_lnL` [float]:
             Profile log-likelihood.
         """
-        theta = np.array(theta, dtype='float64')
-        theta0 = np.array(theta0, dtype='float64')
+        theta = np.array(theta, dtype=np.float64)
+        theta0 = np.array(theta0, dtype=np.float64)
         if free_theta is None:
             free_theta = np.zeros(len(theta), dtype='bool')
         else:
@@ -739,7 +739,7 @@ class EquivalentCounts(object):
 
 def _func_to_templates(flux, x, dx = None):
     """Return finite differences for use in LinModel."""
-    x = np.array(x, dtype='float64')
+    x = np.array(x, dtype=np.float64)
     if dx is None:
         dx = x*0.01
     fluxes = []
@@ -789,7 +789,7 @@ class Funkfish(object):
             details.
         """
         self._f = f
-        self._x0 = np.array(theta0, dtype='float64')
+        self._x0 = np.array(theta0, dtype=np.float64)
         self._Sigma = K
         self._exposure = E
         self._constraints = T
