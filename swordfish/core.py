@@ -70,7 +70,7 @@ class Swordfish(object):
             N = np.zeros_like(N)
         else:
             if not isinstance(B, list):
-                B = [np.array(B, dtype='flota64'),]
+                B = [np.array(B, dtype='float64'),]
             else:
                 B = [np.array(b, dtype='float64') for b in B]
                 if len(set([b.shape for b in B])) != 1:
